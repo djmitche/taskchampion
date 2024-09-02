@@ -146,7 +146,7 @@ fn apply_version(
     //
     // Operational transforms provide this on an operation-by-operation basis.  To break this
     // down, we treat each server operation individually, in order.  For each such operation,
-    // we start in this state:
+    // we transform it against each local operation in turn:
     //
     //
     //      base state-*
@@ -161,34 +161,62 @@ fn apply_version(
     //      new-\ /
     // server op *-new local state
     //
-    // This is slightly complicated by the fact that the transform function can return None,
-    // indicating no operation is required.  If this happens for a local op, we can just omit
-    // it.  If it happens for server op, then we must copy the remaining local ops.
+    // The resulting new server op -- if any -- is then applied locally.
+    //
+    // This is complicated by the desire to keep operations in storage even if they "lose" to
+    // a conflicting operation. This is necessary so that each replica has enough operations to
+    // reproduce the "history" of a task.
+    //
+    // To accomplish this, we take advantage of the WINNER INVARIANT: when an operation on one side
+    // "loses" to its partner, we keep both the losing and winning operations, in that order.  The
+    // invariant ensures that this has the same result as keeping only the winning operation. The
+    // result is that, depending on the result of [`SyncOp::transform`], we may keep 0, 1, or 2
+    // transformed operations.
     for server_op in version.operations.drain(..) {
         trace!(
             "rebasing local operations onto server operation {:?}",
             server_op
         );
         let mut new_local_ops = Vec::with_capacity(local_ops.len());
-        let mut svr_op = Some(server_op);
-        for local_op in local_ops.drain(..) {
-            if let Some(o) = svr_op {
-                let (new_server_op, new_local_op) = SyncOp::transform(o, local_op.clone());
-                trace!("local operation {:?} -> {:?}", local_op, new_local_op);
-                svr_op = new_server_op;
-                if let Some(o) = new_local_op {
-                    new_local_ops.push(o);
-                }
-            } else {
+        let mut server_ops = vec![server_op];
+        for lo in local_ops.drain(..) {
+            if server_ops.is_empty() {
                 trace!(
                     "local operation {:?} unchanged (server operation consumed)",
-                    local_op
+                    lo
                 );
-                new_local_ops.push(local_op);
+                new_local_ops.push(lo);
+                continue;
             }
+            let mut new_server_ops = Vec::new();
+            for so in server_ops {
+                match SyncOp::transform(&lo, &so) {
+                    crate::server::TransformResult::NoConflict => {
+                        new_local_ops.push(lo.clone());
+                        new_server_ops.push(so);
+                    }
+                    crate::server::TransformResult::Redundant => {
+                        // Nothing to do.
+                    }
+                    crate::server::TransformResult::Op1Wins => {
+                        // The local op won, but `so` needs to be included in the server ops,
+                        // followed by `lo`. TODO: this crashes proptests!
+                        new_server_ops.push(so);
+                        new_server_ops.push(lo.clone());
+                        new_local_ops.push(lo.clone());
+                    }
+                    crate::server::TransformResult::Op2Wins => {
+                        // Opposite of Op1Wins.
+                        new_local_ops.push(lo.clone());
+                        new_local_ops.push(so.clone());
+                        new_server_ops.push(so);
+                    }
+                }
+            }
+            server_ops = new_server_ops;
         }
-        if let Some(o) = svr_op {
-            if let Err(e) = apply::apply_op(txn, &o) {
+        for so in server_ops {
+            if let Err(e) = apply::apply_op(txn, &so) {
                 warn!("Invalid operation when syncing: {} (ignored)", e);
             }
         }

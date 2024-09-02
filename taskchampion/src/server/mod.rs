@@ -30,3 +30,4 @@ pub use config::ServerConfig;
 pub use types::*;
 
 pub(crate) use op::SyncOp;
+pub(crate) use op::TransformResult;

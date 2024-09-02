@@ -498,12 +498,7 @@ pub(super) fn unsynced_operations(mut storage: impl Storage) -> Result<()> {
     {
         let mut txn = storage.txn()?;
         let ops = txn.unsynced_operations()?;
-        assert_eq!(
-            ops,
-            vec![
-                Operation::Create { uuid: uuid3 },
-            ]
-        );
+        assert_eq!(ops, vec![Operation::Create { uuid: uuid3 },]);
         assert_eq!(txn.num_unsynced_operations()?, 1);
     }
     Ok(())
@@ -701,7 +696,10 @@ pub(super) fn sync_complete(mut storage: impl Storage) -> Result<()> {
         let mut txn = storage.txn()?;
 
         txn.delete_task(uuid2)?;
-        txn.add_operation(Operation::Delete { uuid: uuid2, old_task: TaskMap::new() })?;
+        txn.add_operation(Operation::Delete {
+            uuid: uuid2,
+            old_task: TaskMap::new(),
+        })?;
 
         txn.commit()?;
     }
