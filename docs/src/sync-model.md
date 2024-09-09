@@ -51,7 +51,7 @@ Deleting a task that does not exist has no effect.
 The Update form updates the given property of the given task, where the property and values are strings.
 The `property` is the property being updated, and the `value` gives its new value (or None to delete a property).
 The timestamp on updates serves as additional metadata and is used to resolve conflicts.
-Updating a task that does not exist has no effect.
+Updating a task that does not exist creates the task.
 
 ### Versions
 

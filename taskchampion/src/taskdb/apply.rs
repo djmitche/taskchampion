@@ -28,16 +28,19 @@ pub(super) fn apply_operations(txn: &mut dyn StorageTxn, operations: &Operations
                 ..
             } => {
                 // TODO: could cache this value from op to op
-                let task = txn.get_task(*uuid)?;
-                // If the task does not exist, do nothing.
-                if let Some(mut task) = task {
-                    if let Some(v) = value {
-                        task.insert(property.clone(), v.clone());
-                    } else {
-                        task.remove(property);
-                    }
-                    txn.set_task(*uuid, task)?;
+                let mut task = txn.get_task(*uuid)?;
+                // If the task does not exist, create it first.
+                if task.is_none() {
+                    txn.create_task(*uuid)?;
+                    task = txn.get_task(*uuid)?;
                 }
+                let mut task = task.expect("Task should have been created if necessary");
+                if let Some(v) = value {
+                    task.insert(property.clone(), v.clone());
+                } else {
+                    task.remove(property);
+                }
+                txn.set_task(*uuid, task)?;
             }
             Operation::UndoPoint => {}
         }
@@ -224,7 +227,9 @@ mod tests {
             txn.commit()?;
         }
 
-        assert_eq!(db.sorted_tasks(), vec![]);
+        assert_eq!(db.sorted_tasks(), 
+            vec![(uuid, vec![("title".into(), "my task".into())])]
+        );
         Ok(())
     }
 
