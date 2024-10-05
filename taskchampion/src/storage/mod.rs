@@ -60,7 +60,13 @@ pub(crate) const DEFAULT_BASE_VERSION: Uuid = crate::server::NIL_VERSION_ID;
 /// A transaction is not visible to other readers until it is committed with
 /// [`crate::storage::StorageTxn::commit`].  Transactions are aborted if they are dropped.
 /// It is safe and performant to drop transactions that did not modify any data without committing.
-pub trait StorageTxn {
+///
+/// # Sealed
+///
+/// This trait is sealed, and cannot be ipmlemented outside of the `taskchampion` crate. This is to
+/// allow development flexibility, and the decision may be reconsidered when the trait is more
+/// stable.
+pub trait StorageTxn: crate::private::Sealed {
     /// Get an (immutable) task, if it is in the storage
     fn get_task(&mut self, uuid: Uuid) -> Result<Option<TaskMap>>;
 
@@ -148,7 +154,13 @@ pub trait StorageTxn {
 
 /// A trait for objects able to act as task storage.  Most of the interesting behavior is in the
 /// [`crate::storage::StorageTxn`] trait.
-pub trait Storage {
+///
+/// # Sealed
+///
+/// This trait is sealed, and cannot be ipmlemented outside of the `taskchampion` crate. This is to
+/// allow development flexibility, and the decision may be reconsidered when the trait is more
+/// stable.
+pub trait Storage: crate::private::Sealed {
     /// Begin a transaction
     fn txn<'a>(&'a mut self) -> Result<Box<dyn StorageTxn + 'a>>;
 }

@@ -97,6 +97,8 @@ fn sealed_from_resp(resp: ureq::Response, version_id: Uuid, content_type: &str) 
     }
 }
 
+impl crate::private::Sealed for SyncServer {}
+
 impl Server for SyncServer {
     fn add_version(
         &mut self,

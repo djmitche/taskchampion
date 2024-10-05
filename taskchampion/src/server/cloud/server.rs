@@ -338,6 +338,8 @@ impl<SVC: Service> CloudServer<SVC> {
     }
 }
 
+impl<SVC: Service> crate::private::Sealed for CloudServer<SVC> {}
+
 impl<SVC: Service> Server for CloudServer<SVC> {
     fn add_version(
         &mut self,

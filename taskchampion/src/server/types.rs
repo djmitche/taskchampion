@@ -50,7 +50,13 @@ pub enum GetVersionResult {
 }
 
 /// A value implementing this trait can act as a server against which a replica can sync.
-pub trait Server {
+///
+/// # Sealed
+///
+/// This trait is sealed, and cannot be ipmlemented outside of the `taskchampion` crate. This is to
+/// allow development flexibility, and the decision may be reconsidered when the trait is more
+/// stable.
+pub trait Server: crate::private::Sealed {
     /// Add a new version.
     ///
     /// This must ensure that the new version is the only version with the given

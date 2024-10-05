@@ -65,6 +65,8 @@ impl TestServer {
     }
 }
 
+impl crate::private::Sealed for TestServer {}
+
 impl Server for TestServer {
     /// Add a new version.  If the given version number is incorrect, this responds with the
     /// appropriate version and expects the caller to try again.

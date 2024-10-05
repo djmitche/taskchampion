@@ -161,6 +161,9 @@ impl<'t> Txn<'t> {
     }
 }
 
+impl crate::private::Sealed for SqliteStorage {}
+impl crate::private::Sealed for Txn<'_> {}
+
 impl Storage for SqliteStorage {
     fn txn<'a>(&'a mut self) -> Result<Box<dyn StorageTxn + 'a>> {
         let txn = self

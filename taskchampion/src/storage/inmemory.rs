@@ -212,6 +212,9 @@ impl InMemoryStorage {
     }
 }
 
+impl crate::private::Sealed for InMemoryStorage {}
+impl crate::private::Sealed for Txn<'_> {}
+
 impl Storage for InMemoryStorage {
     fn txn<'a>(&'a mut self) -> Result<Box<dyn StorageTxn + 'a>> {
         Ok(Box::new(Txn {

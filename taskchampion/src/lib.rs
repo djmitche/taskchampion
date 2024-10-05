@@ -66,6 +66,11 @@ mod taskdb;
 mod utils;
 mod workingset;
 
+mod private {
+    /// Supertrait for public traits that cannot be implemented outside this crate.
+    pub trait Sealed {}
+}
+
 pub use depmap::DependencyMap;
 pub use errors::Error;
 pub use operation::{Operation, Operations};

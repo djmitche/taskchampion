@@ -108,6 +108,8 @@ impl LocalServer {
     }
 }
 
+impl crate::private::Sealed for LocalServer {}
+
 impl Server for LocalServer {
     // TODO: better transaction isolation for add_version (gets and sets should be in the same
     // transaction)
