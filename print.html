@@ -176,15 +176,21 @@ The working set can be &quot;rebuilt&quot; as the task list changes, updating th
 This may refer to an instance of <code>taskchampion-sync-server</code> or a number of other options.</p>
 <h2 id="apis"><a class="header" href="#apis">APIs</a></h2>
 <h3 id="rust"><a class="header" href="#rust">Rust</a></h3>
-<p>TaskChampion is implemented in Rust, and implementation represents its primary public API.
-It is documented at <a href="https://docs.rs/taskchampion/latest/taskchampion/">docs.rs/taskchampion</a>.</p>
-<h3 id="c"><a class="header" href="#c">C</a></h3>
-<p>The C API contains a rough mapping of Rust types to opaque C structures, and Rust methods to C functions.</p>
-<p>The <code>taskchampion-lib</code> crate generates libraries suitable for use from C (or any C-compatible language).
-It is a &quot;normal&quot; Cargo crate that happens to export a number of <code>extern &quot;C&quot;</code> symbols, and also contains a <a href="https://github.com/GothenburgBitFactory/taskchampion/blob/main/lib/taskchampion.h"><code>taskchampion.h</code></a> defining those symbols.
-The primary documentation for the C API is in the header file.</p>
-<p><em>WARNING: the C API is not yet stable!</em>
-Please consult with the TaskChampion developers before relying on this API.</p>
+<p>TaskChampion is implemented in Rust, and this implementation represents its
+primary public API. It is documented at
+<a href="https://docs.rs/taskchampion/latest/taskchampion/">docs.rs/taskchampion</a>.</p>
+<h3 id="python"><a class="header" href="#python">Python</a></h3>
+<p>TaskChampion is available from Python via
+<a href="https://pypi.org/project/taskchampion-py/">taskchampion-py</a>. The Python API is
+closely modeled on the Rust API.</p>
+<h3 id="ruby"><a class="header" href="#ruby">Ruby</a></h3>
+<p>TaskChampion is available from Ruby via
+<a href="https://github.com/timcase/taskchampion-rb">taskchampion-rb</a>.</p>
+<h3 id="cc"><a class="header" href="#cc">C/C++</a></h3>
+<p>C/C++ users should use a tool like <a href="https://cxx.rs">cxx</a> to wrap this package.
+See
+<a href="https://github.com/GothenburgBitFactory/taskwarrior/tree/develop/src/taskchampion-cpp">Taskwarrior</a>
+for an example.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="task-model"><a class="header" href="#task-model">Task Model</a></h1>
 <p>Tasks are stored internally as a key/value map with string keys and values.
 Display layers should apply appropriate defaults where necessary.</p>
@@ -222,9 +228,6 @@ Reconciling these two changes on a sync operation would result in one change win
 These attributes can be used to store additional data associated with a task.
 For example, applications that synchronize tasks with other systems such as calendars or team planning services might store unique identifiers for those systems as UDAs.
 The application defining a UDA defines the format of the value.</p>
-<p>UDAs <em>should</em> have a namespaced structure of the form <code>&lt;namespace&gt;.&lt;key&gt;</code>, where <code>&lt;namespace&gt;</code> identifies the application defining the UDA.
-For example, a service named &quot;DevSync&quot; synchronizing tasks from GitHub might use UDAs like <code>devsync.github.issue-id</code>.
-Note that many existing UDAs for Taskwarrior integrations do not follow this pattern; these are referred to as legacy UDAs.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="synchronization-and-the-sync-server"><a class="header" href="#synchronization-and-the-sync-server">Synchronization and the Sync Server</a></h1>
 <p>This section covers <em>synchronization</em> of <em>replicas</em> containing the same set of tasks.
 A replica can perform all operations locally without connecting to a sync server, then share those operations with other replicas when it connects.
@@ -570,7 +573,7 @@ See <a href="./tasks.html">Tasks</a> for details on the content of that map.</p>
 In other words, operations act as deltas between database states.
 Operations are crucial to synchronization of replicas, described in <a href="./sync-model.html">Synchronization Model</a>.</p>
 <p>Operations are entirely managed by the replica, and some combinations of operations are described as &quot;invalid&quot; here.
-A replica must not create invalid operations, but should be resilient to receiving invalid operations during a synchronization operation.</p>
+A replica must not create invalid operations, but should be resilient to receiving invalid operations during the synchronization process.</p>
 <p>Each operation has one of the forms </p>
 <ul>
 <li><code>Create(uuid)</code></li>
@@ -616,9 +619,11 @@ Replica operations are converted to sync operations as follows:</p>
 <li><code>Update(uuid, property, oldValue, newValue, timestamp)</code> -&gt; <code>Update(uuid, property, newValue, timestamp)</code></li>
 <li><code>UndoPoint()</code> -&gt; Ø (dropped from operation sequence)</li>
 </ul>
-<p>Once a sequence of operations has been synchronized, there is no need to store those operations on the replica.
-The current implementation deletes operations at that time.
-An alternative approach is to keep operations for existing tasks, and provide access to those operations as a &quot;history&quot; of modifications to the task.</p>
+<h3 id="storage-1"><a class="header" href="#storage-1">Storage</a></h3>
+<p>The storage backend stores all operations that apply to existing tasks, tracking which have and have not been synchronized.
+Only unsynchronized operations are used in the synchronization process.
+Synchronized operations are kept as a log of changes to the relevant tasks.
+Synchronized <code>UndoPoint</code> operations are not stored.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="task-database"><a class="header" href="#task-database">Task Database</a></h1>
 <p>The task database is a layer of abstraction above the replica storage layer, responsible for maintaining some important invariants.
 While the storage is pluggable, there is only one implementation of the task database.</p>
