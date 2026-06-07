@@ -753,4 +753,36 @@ mod test {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_sync_no_snapshot() -> Result<()> {
+        let mut testserver = TestServer::new();
+        let mut server: Box<dyn Server> = testserver.server();
+
+        // Push a version to the server, without a snapshot.
+        let mut db1 = TaskDb::new(InMemoryStorage::new());
+        // create and update a task..
+        let uuid = Uuid::new_v4();
+        let mut ops = Operations::new();
+        let now1 = Utc::now();
+        ops.push(Operation::Create { uuid });
+        ops.push(Operation::Update {
+            uuid,
+            property: "title".into(),
+            value: Some("my first task".into()),
+            old_value: None,
+            timestamp: now1,
+        });
+        db1.commit_operations(ops, |_| false).await?;
+        sync(&mut server, db1.storage.txn().await?.as_mut(), true).await?;
+        testserver.delete_snapshot();
+
+        // Sync another replica to the server.
+        let mut db2 = TaskDb::new(InMemoryStorage::new());
+        let err = sync(&mut server, db2.storage.txn().await?.as_mut(), false).await;
+        assert!(err.is_err());
+
+        Ok(())
+    }
+
 }
